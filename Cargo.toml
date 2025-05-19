@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 adw = { version = "0.7.2", package = "libadwaita", features = ["v1_6"] }
+futures = "0.3.31"
 gtk4 = { version = "0.9.6", features = ["gnome_47"] }

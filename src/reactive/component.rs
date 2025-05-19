@@ -8,10 +8,10 @@ pub enum UpdateAction {
 }
 
 pub trait Component: Default + Unpin {
-  type Message: Clone + Send + Debug + Unpin;
+  type Msg: Clone + Send + Debug + Unpin;
   type Props: Clone + Default;
 
-  fn update(&self, _message: Self::Message) -> UpdateAction {
+  fn update(&self, _message: Self::Msg) -> UpdateAction {
     UpdateAction::None
   }
 
@@ -26,5 +26,5 @@ pub trait Component: Default + Unpin {
   fn mounted(&self) {}
   fn unmounted(&self) {}
 
-  fn view(&self) -> VNode<Self>;
+  fn view(&self) -> VNode;
 }

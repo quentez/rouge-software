@@ -1,4 +1,6 @@
-fn main() {
-  // let app = RelmApp::new("com.rougeos.software");
-  // app.run::<CounterModel>(0);
+use rouge_software::reactive;
+use std::process;
+
+fn main() -> glib::ExitCode {
+  reactive::run()
 }

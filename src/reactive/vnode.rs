@@ -1,11 +1,20 @@
-mod vcomponent;
-mod vobject;
+pub mod vcomponent;
+pub mod vobject;
 
-use crate::reactive::component::Component;
 use vcomponent::VComponent;
 use vobject::VObject;
 
-pub enum VNode<C: Component> {
-  Object(VObject<C>),
-  Component(VComponent<C>),
+pub enum VNode {
+  Object(VObject),
+  Component(VComponent),
+}
+
+impl VNode {
+  fn of_object(source: VObject) -> VNode {
+    VNode::Object(source)
+  }
+
+  fn of_component(source: VComponent) -> VNode {
+    VNode::Component(source)
+  }
 }
