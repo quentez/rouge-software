@@ -7,16 +7,16 @@ use vobject::VObject;
 use super::component::Component;
 
 pub enum VNode<C: Component> {
-  Object(VObject),
+  Object(VObject<C>),
   Component(VComponent<C>),
 }
 
 impl<C: Component> VNode<C> {
-  fn of_object(source: VObject) -> VNode<C> {
+  fn of_object(source: VObject<C>) -> VNode<C> {
     VNode::Object(source)
   }
 
-  fn of_component(source: VComponent) -> VNode<C> {
+  fn of_component(source: VComponent<C>) -> VNode<C> {
     VNode::Component(source)
   }
 }

@@ -50,13 +50,7 @@ fn build_obj<A: IsA<Object>, C: Component>(spec: &VObject<C>) -> A {
     .unwrap_or_else(|_| panic!("build_obj: cannot cast {} to {}", class, A::static_type()))
 }
 
-fn add_child<Model: Component>(
-  parent: &Object,
-  index: usize,
-  total: usize,
-  child_spec: &VNode<Model>,
-  child: &Object,
-) {
+fn add_child(parent: &Object, index: usize, total: usize, child: &Object) {
   // Application.
   if let Some(application) = parent.downcast_ref::<Application>() {
     if let Some(window) = child.downcast_ref::<Window>() {
@@ -174,94 +168,6 @@ fn add_child<Model: Component>(
   else {
     panic!("Don't know how to add children to a {}", parent.type_());
   }
-  // } else if let Some(button) = parent.downcast_ref::<MenuButton>() {
-  //   // MenuButton: can only have a single child, either a `Menu` set with
-  //   // `set_popup` or any other `Widget` set with `set_popover`.
-  //   if total > 1 {
-  //     panic!(
-  //       "MenuButton can only have 1 child, but {} were found.",
-  //       total,
-  //     );
-  //   }
-  // if let Some(menu) = child.downcast_ref::<Menu>() {
-  //   button.set_popup(Some(menu));
-  // } else if let Some(widget) = child.downcast_ref::<Widget>() {
-  //   button.set_popover(Some(widget));
-  // } else {
-  //   panic!(
-  //     "MenuButton's children must be Widgets, but {} was found.",
-  //     child.type_()
-  //   );
-  // }
-  // } else if let Some(item) = parent.downcast_ref::<MenuItem>() {
-  //   // MenuItem: single child, must be a `Menu`, set with `set_submenu`.
-  //   if total > 1 {
-  //     panic!("MenuItem can only have 1 child, but {} were found.", total);
-  //   }
-  //   if let Some(menu) = child.downcast_ref::<Menu>() {
-  //     item.set_submenu(Some(menu));
-  //   } else {
-  //     panic!(
-  //       "MenuItem can only take children of type Menu, but {} was found.",
-  //       child.type_()
-  //     );
-  //   }
-  // } else if let Some(dialog) = parent.downcast_ref::<Dialog>() {
-  //   // Dialog: children must be added to the Dialog's content area through
-  //   // get_content_area().
-  //   if let Some(widget) = child.downcast_ref::<Widget>() {
-  //     dialog.content_area().add(widget);
-  //   } else {
-  //     panic!(
-  //       "Dialog's children must be Widgets, but {} was found.",
-  //       child.type_()s
-  //     );
-  //   }
-  // } else if let Some(parent) = parent.downcast_ref::<Bin>() {
-  //   // Bin: can only have a single child.
-  //   if total > 1 {
-  //     panic!("Bins can only have 1 child, but {} were found.", total);
-  //   }
-  //   if let Some(widget) = child.downcast_ref::<Widget>() {
-  //     parent.set_child(Some(widget));
-  //   } else {
-  //     panic!(
-  //       "Bin's child must be a Widget, but {} was found.",
-  //       child.type_()
-  //     );
-  //   }
-  // } else if let Some(parent) = parent.downcast_ref::<Notebook>() {
-  //   // Notebook: added normally, except one widget can be added using
-  //   // set_action_widget if it has the action_widget_start or
-  //   // action_widget_end child property (which are faked in ext.rs). More
-  //   // than one child with each of these properties is undefined behaviour.
-  //   if let Some(widget) = child.downcast_ref::<Widget>() {
-  //     if child_spec.get_child_prop("action_widget_start").is_some() {
-  //       parent.set_action_widget(widget, gtk::PackType::Start);
-  //     } else if child_spec.get_child_prop("action_widget_end").is_some() {
-  //       parent.set_action_widget(widget, gtk::PackType::End);
-  //     } else {
-  //       parent.add(widget);
-  //     }
-  //   } else {
-  //     panic!(
-  //       "Notebook's children must be Widgets, but {} was found.",
-  //       child.type_()
-  //     );
-  //   }
-  // } else if let Some(container) = parent.downcast_ref::<Container>() {
-  //   if let Some(widget) = child.downcast_ref::<Widget>() {
-  //     container.add(widget);
-  //   } else {
-  //     panic!(
-  //       "Container's children must be Widgets, but {} was found.",
-  //       child.type_()
-  //     );
-  //   }
-  // // Apply child properties
-  // for prop in child_spec.get_child_props() {
-  //   (prop.set)(child.upcast_ref(), Some(parent), true);
-  // }
 }
 
 fn remove_child(parent: &Object, child: &Object) {
@@ -345,8 +251,6 @@ fn remove_child(parent: &Object, child: &Object) {
 }
 
 impl<C: 'static + Component> VObjectState<C> {
-  // This function build the root object, but not its children. You must call
-  // `build_children()` to finalise construction.
   pub fn build_root(vobj: &VObject<C>, parent: Option<&Object>, scope: &Scope<C>) -> Self {
     // Build this object
     let object: Object = build_obj(&vobj);
@@ -379,7 +283,7 @@ impl<C: 'static + Component> VObjectState<C> {
       for (index, child_spec) in children.iter().enumerate() {
         let child = VState::build(child_spec, Some(&object), &scope);
         let child_object = child.object().clone();
-        add_child(&object, index, total_children, child_spec, &child_object);
+        add_child(&object, index, total_children, &child_object);
         self.children.push(child);
       }
     }
