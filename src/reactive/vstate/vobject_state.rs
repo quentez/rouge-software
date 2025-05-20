@@ -57,6 +57,7 @@ fn add_child<Model: Component>(
   child_spec: &VNode<Model>,
   child: &Object,
 ) {
+  // Application.
   if let Some(application) = parent.downcast_ref::<Application>() {
     if let Some(window) = child.downcast_ref::<Window>() {
       application.add_window(window);
@@ -68,6 +69,111 @@ fn add_child<Model: Component>(
         child.type_()
       );
     }
+  }
+  // ApplicationWindow.
+  else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
+    // ApplicationWindow: takes any number of Actions, optionally one
+    // ShortcutsWindow added with `set_help_overlay()`, and either 1 or 2
+    // Widgets. If 1, it's the main widget. If 2, the first is added with
+    // `set_titlebar()` and the second is the main widget.
+    if let Some(action) = child.downcast_ref::<Action>() {
+      window.add_action(action);
+    } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
+      window.set_help_overlay(Some(help_overlay));
+    } else if let Some(widget) = child.downcast_ref::<Widget>() {
+      window.set_child(Some(widget));
+      // match window.child() {
+      //   None => window.set_child(Some(widget)),
+      //   Some(ref titlebar) if window.titlebar().is_none() => {
+      //     window.set_titlebar(Some(titlebar));
+      //     window.set_child(Some(widget));
+      //   }
+      //   _ => panic!("ApplicationWindow can have at most two Widget children."),
+      // }
+    } else {
+      panic!(
+        "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Window.
+  else if let Some(window) = parent.downcast_ref::<Window>() {
+    // Window: takes only 1 or 2 Widgets. If 1 widget child, it's the
+    // window's main widget. If 2, the first is the title bar and the second
+    // is the main widget. More than 2 goes boom.
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      if total == 2 && index == 0 {
+        window.set_titlebar(Some(widget));
+      } else {
+        window.set_child(Some(widget));
+      }
+    } else {
+      panic!(
+        "Window's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // HeaderBar.
+  else if let Some(parent) = parent.downcast_ref::<HeaderBar>() {
+    // HeaderBar: added normally, except one widget can be added using
+    // set_custom_title if it has the custom_title=true child property
+    // (which is faked in ext.rs). More than one child with this property is
+    // undefined behaviour.
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      parent.pack_end(widget);
+      // if child_spec.get_child_prop("custom_title").is_some() {
+      //   parent.set_custom_title(Some(widget));
+      // } else {
+      //   parent.add(widget);
+      // }
+    } else {
+      panic!(
+        "HeaderBar's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Box.
+  else if let Some(parent) = parent.downcast_ref::<Box>() {
+    // Box: added normally, except one widget can be added using
+    // set_center_widget() if it has the center_widget=true child property
+    // (which is faked in ext.rs). More than one child with this property is
+    // undefined behaviour.
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      parent.append(widget);
+      // if child_spec.get_child_prop("center_widget").is_some() {
+      //   parent.set_center_widget(Some(widget));
+      // } else {
+      //   parent.add(widget);
+      // }
+    } else {
+      panic!(
+        "Box's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Grid.
+  else if let Some(parent) = parent.downcast_ref::<Grid>() {
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      // by default we put widgets in the top left corner of the grid
+      // with row and col span of 1; this would typically get overridden
+      // via props but setting the default is important in order to avoid
+      // making the user specify these for every single child widget
+      parent.attach(widget, 0, 0, 1, 1);
+    } else {
+      panic!(
+        "Grid's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Other.
+  else {
+    panic!("Don't know how to add children to a {}", parent.type_());
+  }
   // } else if let Some(button) = parent.downcast_ref::<MenuButton>() {
   //   // MenuButton: can only have a single child, either a `Menu` set with
   //   // `set_popup` or any other `Widget` set with `set_popover`.
@@ -111,47 +217,6 @@ fn add_child<Model: Component>(
   //       child.type_()s
   //     );
   //   }
-  } else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
-    // ApplicationWindow: takes any number of Actions, optionally one
-    // ShortcutsWindow added with `set_help_overlay()`, and either 1 or 2
-    // Widgets. If 1, it's the main widget. If 2, the first is added with
-    // `set_titlebar()` and the second is the main widget.
-    if let Some(action) = child.downcast_ref::<Action>() {
-      window.add_action(action);
-    } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
-      window.set_help_overlay(Some(help_overlay));
-    } else if let Some(widget) = child.downcast_ref::<Widget>() {
-      match window.child() {
-        None => window.set_child(Some(widget)),
-        Some(ref titlebar) if window.titlebar().is_none() => {
-          // window.remove(titlebar);
-          window.set_titlebar(Some(titlebar));
-          window.set_child(Some(widget));
-        }
-        _ => panic!("ApplicationWindow can have at most two Widget children."),
-      }
-    } else {
-      panic!(
-        "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
-        child.type_()
-      );
-    }
-  } else if let Some(window) = parent.downcast_ref::<Window>() {
-    // Window: takes only 1 or 2 Widgets. If 1 widget child, it's the
-    // window's main widget. If 2, the first is the title bar and the second
-    // is the main widget. More than 2 goes boom.
-    if let Some(widget) = child.downcast_ref::<Widget>() {
-      if total == 2 && index == 0 {
-        window.set_titlebar(Some(widget));
-      } else {
-        window.set_child(Some(widget));
-      }
-    } else {
-      panic!(
-        "Window's children must be Widgets, but {} was found.",
-        child.type_()
-      );
-    }
   // } else if let Some(parent) = parent.downcast_ref::<Bin>() {
   //   // Bin: can only have a single child.
   //   if total > 1 {
@@ -165,55 +230,6 @@ fn add_child<Model: Component>(
   //       child.type_()
   //     );
   //   }
-  } else if let Some(parent) = parent.downcast_ref::<HeaderBar>() {
-    // HeaderBar: added normally, except one widget can be added using
-    // set_custom_title if it has the custom_title=true child property
-    // (which is faked in ext.rs). More than one child with this property is
-    // undefined behaviour.
-    if let Some(widget) = child.downcast_ref::<Widget>() {
-      parent.pack_end(widget);
-      // if child_spec.get_child_prop("custom_title").is_some() {
-      //   parent.set_custom_title(Some(widget));
-      // } else {
-      //   parent.add(widget);
-      // }
-    } else {
-      panic!(
-        "HeaderBar's children must be Widgets, but {} was found.",
-        child.type_()
-      );
-    }
-  } else if let Some(parent) = parent.downcast_ref::<Box>() {
-    // Box: added normally, except one widget can be added using
-    // set_center_widget() if it has the center_widget=true child property
-    // (which is faked in ext.rs). More than one child with this property is
-    // undefined behaviour.
-    if let Some(widget) = child.downcast_ref::<Widget>() {
-      parent.append(widget);
-      // if child_spec.get_child_prop("center_widget").is_some() {
-      //   parent.set_center_widget(Some(widget));
-      // } else {
-      //   parent.add(widget);
-      // }
-    } else {
-      panic!(
-        "Box's children must be Widgets, but {} was found.",
-        child.type_()
-      );
-    }
-  } else if let Some(parent) = parent.downcast_ref::<Grid>() {
-    if let Some(widget) = child.downcast_ref::<Widget>() {
-      // by default we put widgets in the top left corner of the grid
-      // with row and col span of 1; this would typically get overridden
-      // via props but setting the default is important in order to avoid
-      // making the user specify these for every single child widget
-      parent.attach(widget, 0, 0, 1, 1);
-    } else {
-      panic!(
-        "Grid's children must be Widgets, but {} was found.",
-        child.type_()
-      );
-    }
   // } else if let Some(parent) = parent.downcast_ref::<Notebook>() {
   //   // Notebook: added normally, except one widget can be added using
   //   // set_action_widget if it has the action_widget_start or
@@ -242,9 +258,6 @@ fn add_child<Model: Component>(
   //       child.type_()
   //     );
   //   }
-  } else {
-    panic!("Don't know how to add children to a {}", parent.type_());
-  }
   // // Apply child properties
   // for prop in child_spec.get_child_props() {
   //   (prop.set)(child.upcast_ref(), Some(parent), true);
@@ -252,7 +265,7 @@ fn add_child<Model: Component>(
 }
 
 fn remove_child(parent: &Object, child: &Object) {
-  // There are also special cases for removing children.
+  // Application.
   if let Some(application) = parent.downcast_ref::<Application>() {
     if let Some(window) = child.downcast_ref::<Window>() {
       application.remove_window(window);
@@ -264,19 +277,69 @@ fn remove_child(parent: &Object, child: &Object) {
         child.type_()
       );
     }
-  } else if let Some(widget) = parent.downcast_ref::<Widget>() {
-    // For a Container and a Widget child, we should always be able to call
-    // `Container::remove`.
-    if let Some(child_widget) = child.downcast_ref::<Widget>() {
-      widget.remove
-      container.remove(child_widget);
+  }
+  // ApplicationWindow.
+  else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
+    if let Some(action) = child.downcast_ref::<Action>() {
+      window.remove_action(&action.name());
+    } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
+      window.set_help_overlay(None);
+    } else if let Some(widget) = child.downcast_ref::<Widget>() {
+      if window.titlebar().map_or(false, |w| w.eq(widget)) {
+        window.set_titlebar(Option::<&Widget>::None);
+      }
+
+      if window.child().map_or(false, |w| w.eq(widget)) {
+        window.set_child(Option::<&Widget>::None);
+      }
     } else {
       panic!(
-        "Widgets can only contain other Widgets but was asked to remove a {}.",
+        "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
         child.type_()
       );
     }
-  } else {
+  }
+  // Window.
+  else if let Some(window) = parent.downcast_ref::<Window>() {
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      if window.titlebar().map_or(false, |w| w.eq(widget)) {
+        window.set_titlebar(Option::<&Widget>::None);
+      }
+
+      if window.child().map_or(false, |w| w.eq(widget)) {
+        window.set_child(Option::<&Widget>::None);
+      }
+    } else {
+      panic!(
+        "Window's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Box.
+  else if let Some(parent) = parent.downcast_ref::<Box>() {
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      parent.remove(widget);
+    } else {
+      panic!(
+        "Box's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Grid.
+  else if let Some(parent) = parent.downcast_ref::<Grid>() {
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      parent.remove(widget);
+    } else {
+      panic!(
+        "Grid's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // Other.
+  else {
     panic!("Don't know how to remove a child from a {}", parent.type_());
   }
 }
