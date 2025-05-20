@@ -31,7 +31,7 @@ impl Component for AppModel {
   type Msg = AppMsg;
   type Props = ();
 
-  fn view(&self) -> VNode {
+  fn view(&self) -> VNode<AppModel> {
     ApplicationWindow::c()
   }
 }

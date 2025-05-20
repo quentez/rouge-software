@@ -4,30 +4,26 @@ use adw::glib::{
 };
 use gtk4::Widget;
 
-use crate::reactive::vnode::VNode;
+use crate::reactive::{component::Component, vnode::VNode};
 
-pub struct VObject {
+pub struct VObject<C: Component> {
   pub object_type: Type,
-  // pub constructor: Option<Box<dyn Fn() -> Object>>,
+  pub constructor: Option<Box<dyn Fn() -> Object>>,
   // pub props: Vec<VProperty>,
   // pub handlers: Vec<VHandler<Model>>,
-  pub children: Option<Vec<VNode>>,
+  pub children: Option<Vec<VNode<C>>>,
 }
 
-pub trait VObjectNodeBuilder {
-  fn c() -> VNode;
+pub trait VObjectNodeBuilder<C: Component> {
+  fn c() -> VNode<C>;
 }
 
-impl<T: IsA<Widget>> VObjectNodeBuilder for T {
-  fn c() -> VNode {
+impl<T: IsA<Widget>, C: Component> VObjectNodeBuilder<C> for T {
+  fn c() -> VNode<C> {
     VNode::of_object(VObject {
       object_type: Self::static_type(),
-      // constructor: (),
+      constructor: None,
       children: None,
     })
   }
 }
-
-// fn test() -> VNode {
-//   adw::AboutDialog::c()
-// }

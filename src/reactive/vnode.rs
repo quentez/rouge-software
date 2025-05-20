@@ -4,17 +4,19 @@ pub mod vobject;
 use vcomponent::VComponent;
 use vobject::VObject;
 
-pub enum VNode {
+use super::component::Component;
+
+pub enum VNode<C: Component> {
   Object(VObject),
-  Component(VComponent),
+  Component(VComponent<C>),
 }
 
-impl VNode {
-  fn of_object(source: VObject) -> VNode {
+impl<C: Component> VNode<C> {
+  fn of_object(source: VObject) -> VNode<C> {
     VNode::Object(source)
   }
 
-  fn of_component(source: VComponent) -> VNode {
+  fn of_component(source: VComponent) -> VNode<C> {
     VNode::Component(source)
   }
 }
