@@ -7,7 +7,7 @@ use adw::{
     object::{Cast, IsA, ObjectExt},
     Object, SignalHandlerId,
   },
-  prelude::BinExt,
+  prelude::{AdwWindowExt, BinExt},
   Application, ApplicationWindow, Bin, HeaderBar, Window,
 };
 use gtk4::{
@@ -64,33 +64,33 @@ fn add_child(parent: &Object, index: usize, total: usize, child: &Object) {
       );
     }
   }
-  // ApplicationWindow.
-  else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
-    // ApplicationWindow: takes any number of Actions, optionally one
-    // ShortcutsWindow added with `set_help_overlay()`, and either 1 or 2
-    // Widgets. If 1, it's the main widget. If 2, the first is added with
-    // `set_titlebar()` and the second is the main widget.
-    if let Some(action) = child.downcast_ref::<Action>() {
-      window.add_action(action);
-    } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
-      window.set_help_overlay(Some(help_overlay));
-    } else if let Some(widget) = child.downcast_ref::<Widget>() {
-      window.set_child(Some(widget));
-      // match window.child() {
-      //   None => window.set_child(Some(widget)),
-      //   Some(ref titlebar) if window.titlebar().is_none() => {
-      //     window.set_titlebar(Some(titlebar));
-      //     window.set_child(Some(widget));
-      //   }
-      //   _ => panic!("ApplicationWindow can have at most two Widget children."),
-      // }
-    } else {
-      panic!(
-        "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
-        child.type_()
-      );
-    }
-  }
+  // // ApplicationWindow.
+  // else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
+  //   // ApplicationWindow: takes any number of Actions, optionally one
+  //   // ShortcutsWindow added with `set_help_overlay()`, and either 1 or 2
+  //   // Widgets. If 1, it's the main widget. If 2, the first is added with
+  //   // `set_titlebar()` and the second is the main widget.
+  //   if let Some(action) = child.downcast_ref::<Action>() {
+  //     window.add_action(action);
+  //   } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
+  //     window.set_help_overlay(Some(help_overlay));
+  //   } else if let Some(widget) = child.downcast_ref::<Widget>() {
+  //     window.set_child(Some(widget));
+  //     // match window.child() {
+  //     //   None => window.set_child(Some(widget)),
+  //     //   Some(ref titlebar) if window.titlebar().is_none() => {
+  //     //     window.set_titlebar(Some(titlebar));
+  //     //     window.set_child(Some(widget));
+  //     //   }
+  //     //   _ => panic!("ApplicationWindow can have at most two Widget children."),
+  //     // }
+  //   } else {
+  //     panic!(
+  //       "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
+  //       child.type_()
+  //     );
+  //   }
+  // }
   // Window.
   else if let Some(window) = parent.downcast_ref::<Window>() {
     // Window: takes only 1 or 2 Widgets. If 1 widget child, it's the
@@ -100,7 +100,7 @@ fn add_child(parent: &Object, index: usize, total: usize, child: &Object) {
       if total == 2 && index == 0 {
         window.set_titlebar(Some(widget));
       } else {
-        window.set_child(Some(widget));
+        window.set_content(Some(widget));
       }
     } else {
       panic!(
@@ -185,35 +185,35 @@ fn remove_child(parent: &Object, child: &Object) {
     }
   }
   // ApplicationWindow.
-  else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
-    if let Some(action) = child.downcast_ref::<Action>() {
-      window.remove_action(&action.name());
-    } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
-      window.set_help_overlay(None);
-    } else if let Some(widget) = child.downcast_ref::<Widget>() {
-      if window.titlebar().map_or(false, |w| w.eq(widget)) {
-        window.set_titlebar(Option::<&Widget>::None);
-      }
+  // else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
+  //   if let Some(action) = child.downcast_ref::<Action>() {
+  //     window.remove_action(&action.name());
+  //   } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
+  //     window.set_help_overlay(None);
+  //   } else if let Some(widget) = child.downcast_ref::<Widget>() {
+  //     if window.titlebar().map_or(false, |w| w.eq(widget)) {
+  //       window.set_titlebar(Option::<&Widget>::None);
+  //     }
 
-      if window.child().map_or(false, |w| w.eq(widget)) {
-        window.set_child(Option::<&Widget>::None);
-      }
-    } else {
-      panic!(
-        "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
-        child.type_()
-      );
-    }
-  }
+  //     if window.child().map_or(false, |w| w.eq(widget)) {
+  //       window.set_child(Option::<&Widget>::None);
+  //     }
+  //   } else {
+  //     panic!(
+  //       "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
+  //       child.type_()
+  //     );
+  //   }
+  // }
   // Window.
   else if let Some(window) = parent.downcast_ref::<Window>() {
     if let Some(widget) = child.downcast_ref::<Widget>() {
-      if window.titlebar().map_or(false, |w| w.eq(widget)) {
+      if window.titlebar().is_some_and(|w| w.eq(widget)) {
         window.set_titlebar(Option::<&Widget>::None);
       }
 
-      if window.child().map_or(false, |w| w.eq(widget)) {
-        window.set_child(Option::<&Widget>::None);
+      if window.content().is_some_and(|w| w.eq(widget)) {
+        window.set_content(Option::<&Widget>::None);
       }
     } else {
       panic!(

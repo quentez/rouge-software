@@ -1,6 +1,8 @@
+use adw::{Application, Spinner, Window};
+use gtk4::{Box, Label};
+
 use crate::reactive::vnode::vobject::VObjectBuilder;
 use crate::reactive::{component::Component, vnode::VNode};
-use adw::*;
 
 //
 // State.
@@ -32,6 +34,15 @@ impl Component for AppModel {
   type Props = ();
 
   fn view(&self) -> VNode<AppModel> {
-    Application::c().children(vec![Window::c()])
+    Application::c().children(vec![
+      //
+      Window::c().children(vec![
+        //
+        Box::c().children(vec![
+          //
+          Spinner::c(),
+        ]),
+      ]),
+    ])
   }
 }
