@@ -11,19 +11,25 @@ pub struct VObject<C: Component> {
   pub constructor: Option<Box<dyn Fn() -> Object>>,
   // pub props: Vec<VProperty>,
   // pub handlers: Vec<VHandler<Model>>,
-  pub children: Option<Vec<VNode<C>>>,
+  pub children: Vec<VNode<C>>,
 }
 
-pub trait VObjectNodeBuilder<C: Component> {
+impl<C: Component> VObject<C> {
+  pub fn children(self, children: Vec<VNode<C>>) -> VNode<C> {
+    VNode::Object(Self { children, ..self })
+  }
+}
+
+pub trait VObjectBuilder<C: Component> {
   fn c() -> VNode<C>;
 }
 
-impl<T: IsA<Widget>, C: Component> VObjectNodeBuilder<C> for T {
+impl<T: IsA<Object>, C: Component> VObjectBuilder<C> for T {
   fn c() -> VNode<C> {
-    VNode::of_object(VObject {
+    VNode::Object(VObject {
       object_type: Self::static_type(),
       constructor: None,
-      children: None,
+      children: vec![],
     })
   }
 }

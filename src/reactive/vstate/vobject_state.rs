@@ -278,14 +278,12 @@ impl<C: 'static + Component> VObjectState<C> {
     let object = &self.object;
 
     // Build children.
-    if let Some(children) = &vobj.children {
-      let total_children = children.len();
-      for (index, child_spec) in children.iter().enumerate() {
-        let child = VState::build(child_spec, Some(&object), &scope);
-        let child_object = child.object().clone();
-        add_child(&object, index, total_children, &child_object);
-        self.children.push(child);
-      }
+    let total_children = vobj.children.len();
+    for (index, child_spec) in vobj.children.iter().enumerate() {
+      let child = VState::build(child_spec, Some(&object), &scope);
+      let child_object = child.object().clone();
+      add_child(&object, index, total_children, &child_object);
+      self.children.push(child);
     }
 
     // Show this object, if it's a widget.
@@ -298,5 +296,124 @@ impl<C: 'static + Component> VObjectState<C> {
     let mut state = Self::build_root(vobj, parent, scope);
     state.build_children(vobj, scope);
     state
+  }
+
+  pub fn patch(&mut self, vobj: &VObject<C>, parent: Option<&Object>, scope: &Scope<C>) -> bool {
+    // Patch children
+    let mut to_remove = None;
+    let mut to_append = Vec::new();
+    let mut reconstruct_from = None;
+    for index in 0..(self.children.len().max(vobj.children.len())) {
+      match (self.children.get_mut(index), vobj.children.get(index)) {
+        (Some(VState::Component(target)), Some(spec_item)) => {
+          match spec_item {
+            VNode::Object(_) => {
+              // Component has become a widget; reconstruct from here
+              reconstruct_from = Some(index);
+              break;
+            }
+            VNode::Component(spec) => {
+              if !target.patch(spec, Some(&self.object), scope) {
+                reconstruct_from = Some(index);
+                break;
+              }
+            }
+          }
+        }
+        (Some(VState::Object(target)), Some(spec_item)) => {
+          match spec_item {
+            VNode::Object(spec) => {
+              if target.object.type_() == spec.object_type {
+                // Objects have same type; patch down
+                target.patch(spec, Some(&self.object), scope);
+              } else {
+                // Objects are different, need to reconstruct everything from here
+                reconstruct_from = Some(index);
+                break;
+              }
+            }
+            VNode::Component(_) => {
+              // Gtk object has turned into a component; reconstruct from here
+              reconstruct_from = Some(index);
+              break;
+            }
+          }
+        }
+        (Some(_), None) => {
+          // Extraneous Gtk object; delete
+          if to_remove.is_none() {
+            to_remove = Some(index);
+          }
+          break;
+        }
+        (None, Some(spec)) => {
+          // New spec; construct
+          let state = VState::build(spec, Some(&self.object), scope);
+          add_child(&self.object, index, vobj.children.len(), state.object());
+          to_append.push(state);
+        }
+        (None, None) => break,
+      }
+    }
+    if let Some(index) = reconstruct_from {
+      // Remove all previous children from here onwards
+      if self.object.is::<Window>() && index == 0 && self.children.len() == 2 {
+        panic!("Can't remove a title bar widget from an existing Window!");
+      }
+      for child in self.children.drain(index..) {
+        remove_child(&self.object, child.object());
+        child.unmount();
+      }
+      // Rebuild children from new specs
+      for (index, child_spec) in vobj.children.iter().enumerate().skip(index) {
+        let state = VState::build(child_spec, Some(&self.object), scope);
+        add_child(&self.object, index, vobj.children.len(), state.object());
+        if let Some(w) = state.widget() {
+          w.set_visible(true);
+        }
+        self.children.push(state);
+      }
+    } else {
+      // Remove children flagged as extraneous
+      if let Some(remove_from) = to_remove {
+        if self.object.is::<Window>() && remove_from == 1 && self.children.len() == 2 {
+          panic!("Can't remove a title bar widget from an existing Window!");
+        }
+        for child in self.children.drain(remove_from..) {
+          remove_child(&self.object, &child.object());
+          child.unmount();
+        }
+      }
+      // Or append newly constructed children
+      if self.object.is::<Window>() && !to_append.is_empty() && self.children.len() == 1 {
+        panic!("Can't add a title bar widget to an existing Window!");
+      }
+      for child in to_append {
+        if let Some(w) = child.widget() {
+          w.set_visible(true);
+        }
+        self.children.push(child);
+      }
+    }
+
+    // // Patch properties
+    // self.patch_properties(&vobj.properties, parent);
+
+    // // Patch child properties
+    // self.patch_properties(&vobj.child_props, parent);
+
+    // // Patch handlers
+    // self.patch_handlers(&vobj.handlers, scope);
+
+    true
+  }
+
+  pub fn unmount(self) {
+    for child in self.children {
+      child.unmount();
+    }
+    if let Ok(widget) = self.object.downcast::<Widget>() {
+      widget.unparent();
+    }
   }
 }

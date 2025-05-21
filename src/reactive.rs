@@ -10,18 +10,41 @@ use adw::{
   },
   glib::{
     object::{Cast, ObjectExt},
-    ExitCode,
+    ExitCode, MainContext,
   },
   Application,
 };
 use colored::Colorize;
-use component::{Component, PartialComponentTask};
+use component::{Component, ComponentMessage, PartialComponentTask};
 use log::debug;
 use scope::Scope;
-use std::{env, iter::once};
+use std::env;
+
+enum AndThen {
+  Panic,
+  DoNothing,
+}
+
+fn once<A, F: FnOnce(A)>(and_then: AndThen, f: F) -> impl Fn(A) {
+  use std::cell::Cell;
+  use std::rc::Rc;
+
+  let f = Rc::new(Cell::new(Some(f)));
+  move |value| {
+    if let Some(f) = f.take() {
+      f(value);
+    } else {
+      match and_then {
+        AndThen::Panic => panic!("vgtk::once() function called twice 😒"),
+        AndThen::DoNothing => {}
+      }
+    }
+  }
+}
 
 pub fn start<C: 'static + Component>() -> (Application, Scope<C>) {
-  let partial_task = PartialComponentTask::<C, C>::new(Default::default(), None, None);
+  gtk4::init().expect("GTK failed to initialize.");
+  let partial_task = PartialComponentTask::<C, C>::new(None, None);
 
   let app: Application = partial_task.object().downcast().unwrap_or_else(|_| {
     panic!(

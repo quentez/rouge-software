@@ -1,4 +1,4 @@
-use crate::reactive::vnode::vobject::VObjectNodeBuilder;
+use crate::reactive::vnode::vobject::VObjectBuilder;
 use crate::reactive::{component::Component, vnode::VNode};
 use adw::*;
 
@@ -32,6 +32,6 @@ impl Component for AppModel {
   type Props = ();
 
   fn view(&self) -> VNode<AppModel> {
-    ApplicationWindow::c()
+    Application::c().children(vec![Window::c()])
   }
 }

@@ -1,4 +1,5 @@
-use adw::glib::Object;
+use adw::glib::{object::Cast, Object};
+use gtk4::Widget;
 use vcomponent_state::VComponentState;
 use vobject_state::VObjectState;
 
@@ -47,10 +48,43 @@ impl<Model: 'static + Component> VState<Model> {
     }
   }
 
+  #[must_use]
+  pub(crate) fn patch(
+    &mut self,
+    vnode: &VNode<Model>,
+    parent: Option<&Object>,
+    scope: &Scope<Model>,
+  ) -> bool {
+    match vnode {
+      VNode::Object(object) => match self {
+        VState::Object(state) => state.patch(object, parent, scope),
+        VState::Component(_) => false,
+      },
+      VNode::Component(vcomp) => match self {
+        VState::Component(state) => state.patch(vcomp, parent, scope),
+        VState::Object(_) => false,
+      },
+    }
+  }
+
+  pub fn unmount(self) {
+    match self {
+      VState::Object(state) => state.unmount(),
+      VState::Component(state) => state.unmount(),
+    }
+  }
+
   pub fn object(&self) -> &Object {
     match self {
       VState::Object(state) => &state.object,
       VState::Component(state) => &state.object,
+    }
+  }
+
+  pub fn widget(&self) -> Option<&Widget> {
+    match self {
+      VState::Object(state) => state.object.downcast_ref::<Widget>(),
+      VState::Component(state) => state.object.downcast_ref::<Widget>(),
     }
   }
 }

@@ -12,11 +12,10 @@ pub enum VNode<C: Component> {
 }
 
 impl<C: Component> VNode<C> {
-  fn of_object(source: VObject<C>) -> VNode<C> {
-    VNode::Object(source)
-  }
-
-  fn of_component(source: VComponent<C>) -> VNode<C> {
-    VNode::Component(source)
+  pub fn children(self, children: Vec<VNode<C>>) -> Self {
+    match self {
+      VNode::Object(node) => node.children(children),
+      VNode::Component(_) => panic!("Not implemented."),
+    }
   }
 }
