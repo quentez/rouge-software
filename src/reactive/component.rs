@@ -26,7 +26,7 @@ pub trait Component: Default + Unpin {
   type Msg: Clone + Send + Debug + Unpin;
   type Props: Clone + Default;
 
-  fn update(&self, _message: Self::Msg) -> UpdateAction {
+  fn update(&mut self, _message: Self::Msg) -> UpdateAction {
     UpdateAction::None
   }
 
@@ -34,7 +34,7 @@ pub trait Component: Default + Unpin {
     Default::default()
   }
 
-  fn change(&self, _props: Self::Props) -> UpdateAction {
+  fn change(&mut self, _props: Self::Props) -> UpdateAction {
     unimplemented!("Add a Component::change() implementation.")
   }
 
@@ -94,7 +94,7 @@ where
     PartialComponentTask::new(parent, parent_scope).finalise()
   }
 
-  pub(crate) fn process(&mut self, ctx: &mut Context<'_>) -> Poll<()> {
+  pub fn process(&mut self, ctx: &mut Context<'_>) -> Poll<()> {
     let mut render = false;
     loop {
       let next = Stream::poll_next(self.channel.as_mut(), ctx);
@@ -105,15 +105,18 @@ where
       );
       match next {
         Poll::Ready(Some(msg)) => match msg {
-          ComponentMessage::Update(msg) => match self.state.update(msg) {
-            // UpdateAction::Defer(job) => {
-            //   self.run_job(job);
-            // }
-            UpdateAction::Render => {
-              render = true;
+          ComponentMessage::Update(msg) => {
+            let result = self.state.update(msg);
+            match result {
+              // UpdateAction::Defer(job) => {
+              //   self.run_job(job);
+              // }
+              UpdateAction::Render => {
+                render = true;
+              }
+              UpdateAction::None => {}
             }
-            UpdateAction::None => {}
-          },
+          }
           ComponentMessage::Props(props) => match self.state.change(props) {
             // UpdateAction::Defer(job) => {
             //   self.run_job(job);

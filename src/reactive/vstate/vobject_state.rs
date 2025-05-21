@@ -97,11 +97,11 @@ fn add_child(parent: &Object, index: usize, total: usize, child: &Object) {
     // window's main widget. If 2, the first is the title bar and the second
     // is the main widget. More than 2 goes boom.
     if let Some(widget) = child.downcast_ref::<Widget>() {
-      if total == 2 && index == 0 {
-        window.set_titlebar(Some(widget));
-      } else {
-        window.set_content(Some(widget));
-      }
+      window.set_content(Some(widget));
+      // if total == 2 && index == 0 {
+      //   window.set_titlebar(Some(widget));
+      // } else {
+      // }
     } else {
       panic!(
         "Window's children must be Widgets, but {} was found.",
@@ -184,33 +184,12 @@ fn remove_child(parent: &Object, child: &Object) {
       );
     }
   }
-  // ApplicationWindow.
-  // else if let Some(window) = parent.downcast_ref::<ApplicationWindow>() {
-  //   if let Some(action) = child.downcast_ref::<Action>() {
-  //     window.remove_action(&action.name());
-  //   } else if let Some(help_overlay) = child.downcast_ref::<ShortcutsWindow>() {
-  //     window.set_help_overlay(None);
-  //   } else if let Some(widget) = child.downcast_ref::<Widget>() {
-  //     if window.titlebar().map_or(false, |w| w.eq(widget)) {
-  //       window.set_titlebar(Option::<&Widget>::None);
-  //     }
-
-  //     if window.child().map_or(false, |w| w.eq(widget)) {
-  //       window.set_child(Option::<&Widget>::None);
-  //     }
-  //   } else {
-  //     panic!(
-  //       "ApplicationWindow's children must be Actions or Widgets, but {} was found.",
-  //       child.type_()
-  //     );
-  //   }
-  // }
   // Window.
   else if let Some(window) = parent.downcast_ref::<Window>() {
     if let Some(widget) = child.downcast_ref::<Widget>() {
-      if window.titlebar().is_some_and(|w| w.eq(widget)) {
-        window.set_titlebar(Option::<&Widget>::None);
-      }
+      // if window.titlebar().is_some_and(|w| w.eq(widget)) {
+      //   window.set_titlebar(Option::<&Widget>::None);
+      // }
 
       if window.content().is_some_and(|w| w.eq(widget)) {
         window.set_content(Option::<&Widget>::None);
@@ -260,7 +239,11 @@ impl<C: 'static + Component> VObjectState<C> {
     //   (prop.set)(object.upcast_ref(), parent, true);
     // }
 
-    (vobj.patcher)(&object);
+    let scope_copy = scope.clone();
+    let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
+      scope_copy.send_message(msg);
+    });
+    (vobj.patcher)(&object, dispatch);
 
     // // Apply handlers
     // let mut handlers = HashMap::new();
@@ -398,7 +381,11 @@ impl<C: 'static + Component> VObjectState<C> {
       }
     }
 
-    (vobj.patcher)(&self.object);
+    let scope_copy = scope.clone();
+    let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
+      scope_copy.send_message(msg);
+    });
+    (vobj.patcher)(&self.object, dispatch);
 
     // // Patch properties
     // self.patch_properties(&vobj.properties, parent);

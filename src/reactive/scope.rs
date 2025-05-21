@@ -6,7 +6,9 @@ use std::{
   },
 };
 
+use colored::Colorize;
 use futures::channel::mpsc::UnboundedSender;
+use log::debug;
 
 use crate::reactive::component::Component;
 
@@ -39,12 +41,40 @@ impl<C: 'static + Component> Scope<C> {
     }
   }
 
+  pub fn is_muted(&self) -> bool {
+    self.muted.load(Ordering::SeqCst) > 0
+  }
+
   pub fn mute(&self) {
     self.muted.fetch_add(1, Ordering::SeqCst);
   }
 
   pub fn unmute(&self) {
     self.muted.fetch_sub(1, Ordering::SeqCst);
+  }
+
+  pub fn send_message(&self, message: C::Msg) {
+    self.log(&message);
+    if !self.is_muted() {
+      self
+        .channel
+        .unbounded_send(message)
+        .expect("channel has gone unexpectedly out of scope!");
+    }
+  }
+
+  #[inline(always)]
+  fn log(&self, message: &C::Msg) {
+    debug!(
+      "{} {}: {}",
+      format!(
+        "Scope::send_message{}",
+        if self.is_muted() { " [muted]" } else { "" }
+      )
+      .green(),
+      self.name.magenta().bold(),
+      format!("{:?}", message).bright_white().bold()
+    );
   }
 
   pub fn name(&self) -> &'static str {
