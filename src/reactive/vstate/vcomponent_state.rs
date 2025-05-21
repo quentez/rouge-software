@@ -55,11 +55,6 @@ impl<C: 'static + Component> VComponentState<C> {
 
   pub fn unmount(self) {
     self.state.unmounting();
-
-    // Check if this is still needed (ref counting).
-    if let Ok(widget) = self.object.downcast::<Widget>() {
-      widget.unparent();
-    }
   }
 }
 

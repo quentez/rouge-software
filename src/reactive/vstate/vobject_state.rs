@@ -260,6 +260,8 @@ impl<C: 'static + Component> VObjectState<C> {
     //   (prop.set)(object.upcast_ref(), parent, true);
     // }
 
+    (vobj.patcher)(&object);
+
     // // Apply handlers
     // let mut handlers = HashMap::new();
     // for handler in &vobj.handlers {
@@ -396,6 +398,8 @@ impl<C: 'static + Component> VObjectState<C> {
       }
     }
 
+    (vobj.patcher)(&self.object);
+
     // // Patch properties
     // self.patch_properties(&vobj.properties, parent);
 
@@ -411,9 +415,6 @@ impl<C: 'static + Component> VObjectState<C> {
   pub fn unmount(self) {
     for child in self.children {
       child.unmount();
-    }
-    if let Ok(widget) = self.object.downcast::<Widget>() {
-      widget.unparent();
     }
   }
 }
