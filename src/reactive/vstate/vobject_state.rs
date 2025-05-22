@@ -4,8 +4,9 @@ use adw::{
     Action, Menu, MenuItem,
   },
   glib::{
-    object::{Cast, IsA, ObjectExt},
-    Object, SignalHandlerId,
+    object::{Cast, IsA, ObjectClassExt, ObjectExt},
+    subclass::object,
+    Object, ParamFlags, SignalHandlerId, Value,
   },
   prelude::{AdwWindowExt, BinExt},
   Application, ApplicationWindow, Bin, HeaderBar, Window,
@@ -25,7 +26,8 @@ use crate::reactive::{
 
 pub struct VObjectState<Model: Component> {
   pub object: Object,
-  handlers: HashMap<(&'static str, &'static str), SignalHandlerId>,
+  initial_props: HashMap<&'static str, Value>,
+  handlers: Vec<SignalHandlerId>,
   children: Vec<VState<Model>>,
 }
 
@@ -229,6 +231,35 @@ fn remove_child(parent: &Object, child: &Object) {
   }
 }
 
+const IGNORED_PROPS: [&str; 7] = [
+  "parent",
+  "root",
+  "accessible-role",
+  "layout-manager",
+  "flags",
+  "icon-name",
+  "version",
+];
+
+fn should_save_prop(object: &Object, prop_name: &str) -> bool {
+  // Always ignored props.
+  if IGNORED_PROPS.contains(&prop_name) {
+    return false;
+  }
+
+  // Application.
+  if object.downcast_ref::<Application>().is_some() {
+    return false;
+  }
+
+  // Window.
+  if object.downcast_ref::<Window>().is_some() {
+    return false;
+  }
+
+  true
+}
+
 impl<C: 'static + Component> VObjectState<C> {
   pub fn build_root(vobj: &VObject<C>, parent: Option<&Object>, scope: &Scope<C>) -> Self {
     // Build this object
@@ -239,12 +270,6 @@ impl<C: 'static + Component> VObjectState<C> {
     //   (prop.set)(object.upcast_ref(), parent, true);
     // }
 
-    let scope_copy = scope.clone();
-    let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
-      scope_copy.send_message(msg);
-    });
-    (vobj.patcher)(&object, dispatch);
-
     // // Apply handlers
     // let mut handlers = HashMap::new();
     // for handler in &vobj.handlers {
@@ -252,9 +277,40 @@ impl<C: 'static + Component> VObjectState<C> {
     //   handlers.insert((handler.name, handler.id), handle);
     // }
 
+    let mut initial_props: HashMap<&str, Value> = HashMap::new();
+    for prop in object.list_properties() {
+      if !prop
+        .flags()
+        .contains(ParamFlags::READABLE | ParamFlags::WRITABLE)
+      {
+        continue;
+      }
+
+      if prop.flags().contains(ParamFlags::CONSTRUCT_ONLY)
+        || prop.flags().contains(ParamFlags::CONSTRUCT)
+        || prop.flags().contains(ParamFlags::DEPRECATED)
+      {
+        continue;
+      }
+
+      if !should_save_prop(&object, prop.name()) {
+        continue;
+      }
+
+      let value = object.property_value(prop.name());
+      initial_props.insert(prop.name(), value);
+    }
+
+    let scope_copy = scope.clone();
+    let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
+      scope_copy.send_message(msg);
+    });
+    let handlers = (vobj.patcher)(&object, dispatch);
+
     VObjectState {
       object: object.upcast(),
-      handlers: HashMap::new(),
+      initial_props,
+      handlers,
       children: Vec::new(),
     }
   }
@@ -265,9 +321,9 @@ impl<C: 'static + Component> VObjectState<C> {
     // Build children.
     let total_children = vobj.children.len();
     for (index, child_spec) in vobj.children.iter().enumerate() {
-      let child = VState::build(child_spec, Some(&object), &scope);
+      let child = VState::build(child_spec, Some(object), scope);
       let child_object = child.object().clone();
-      add_child(&object, index, total_children, &child_object);
+      add_child(object, index, total_children, &child_object);
       self.children.push(child);
     }
 
@@ -365,7 +421,7 @@ impl<C: 'static + Component> VObjectState<C> {
           panic!("Can't remove a title bar widget from an existing Window!");
         }
         for child in self.children.drain(remove_from..) {
-          remove_child(&self.object, &child.object());
+          remove_child(&self.object, child.object());
           child.unmount();
         }
       }
@@ -381,11 +437,23 @@ impl<C: 'static + Component> VObjectState<C> {
       }
     }
 
+    // Restore props.
+    for (name, value) in self.initial_props.iter() {
+      self.object.set_property_from_value(name, value);
+    }
+
+    // Remove handlers.
+    for handler in self.handlers.drain(..) {
+      self.object.disconnect(handler);
+    }
+
+    // Re-apply patcher.
     let scope_copy = scope.clone();
     let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
       scope_copy.send_message(msg);
     });
-    (vobj.patcher)(&self.object, dispatch);
+    let new_handlers = (vobj.patcher)(&self.object, dispatch);
+    self.handlers = new_handlers;
 
     // // Patch properties
     // self.patch_properties(&vobj.properties, parent);

@@ -77,11 +77,11 @@ impl Component for AppModel {
             //
             Button::ce(|c, d| {
               c.set_label("Increment");
-              c.connect_clicked(move |_| d(AppMsg::Increment));
+              vec![c.connect_clicked(move |_| d(AppMsg::Increment))]
             }),
             Button::ce(|c, d| {
               c.set_label("Decrement");
-              c.connect_clicked(move |_| d(AppMsg::Decrement));
+              vec![c.connect_clicked(move |_| d(AppMsg::Decrement))]
             }),
             Label::c(move |c| {
               c.set_label(&format!("Counter: {}", count_cloned));
