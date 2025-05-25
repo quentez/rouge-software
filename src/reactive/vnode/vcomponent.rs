@@ -17,12 +17,12 @@ pub struct VComponent<C: Component> {
   pub constructor: Box<Constructor<C>>,
 }
 
-pub trait VComponentBuilder<C: Component> {
-  fn c() -> VNode<C>;
+pub trait VComponentBuilder<'a, C: Component> {
+  fn c() -> VNode<'a, C>;
 }
 
-impl<C: 'static + Component> VComponentBuilder<C> for C {
-  fn c() -> super::VNode<C> {
+impl<'a, C: 'static + Component> VComponentBuilder<'a, C> for C {
+  fn c() -> super::VNode<'a, C> {
     let constructor: Box<Constructor<C>> = Box::new(VComponentState::build::<C>);
     VNode::Component(VComponent {
       parent: PhantomData,

@@ -6,13 +6,13 @@ use vobject::VObject;
 
 use super::component::Component;
 
-pub enum VNode<C: Component> {
-  Object(VObject<C>),
+pub enum VNode<'a, C: Component> {
+  Object(VObject<'a, C>),
   Component(VComponent<C>),
 }
 
-impl<C: Component> VNode<C> {
-  pub fn children(self, children: Vec<VNode<C>>) -> Self {
+impl<'a, C: Component> VNode<'a, C> {
+  pub fn children(self, children: Vec<VNode<'a, C>>) -> Self {
     match self {
       VNode::Object(node) => node.children(children),
       VNode::Component(_) => panic!("Not implemented."),

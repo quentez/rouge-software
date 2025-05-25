@@ -1,4 +1,5 @@
 pub mod component;
+pub mod helpers;
 pub mod scope;
 pub mod vnode;
 pub mod vstate;

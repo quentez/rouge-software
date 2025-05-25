@@ -2,10 +2,11 @@ use adw::{Application, HeaderBar, Window};
 use gtk4::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt};
 use gtk4::{Box, Button, Label, Orientation};
 
-use crate::helpers::widget_ext::ReactiveWidgetExt;
 use crate::reactive::component::UpdateAction;
+use crate::reactive::helpers::widget_ext::ReactiveWidgetExt;
 use crate::reactive::vnode::vobject::VObjectBuilder;
 use crate::reactive::{component::Component, vnode::VNode};
+use std::boxed::Box as B;
 
 //
 // State.
@@ -50,42 +51,40 @@ impl Component for AppModel {
   }
 
   fn view(&self) -> VNode<AppModel> {
-    let count_cloned = self.count;
-
     Application::cs().children(vec![
       //
-      Window::c(|c| {
-        c.set_default_width(300);
-        c.set_default_height(100);
+      Window::c(|w| {
+        w.set_default_width(300);
+        w.set_default_height(100);
       })
       .children(vec![
         //
-        Box::c(|c| {
-          c.set_orientation(Orientation::Vertical);
+        Box::c(|w| {
+          w.set_orientation(Orientation::Vertical);
         })
         .children(vec![
           //
-          HeaderBar::c(|c| {
-            c.set_title_widget(Some(&Label::new(Some("My Adwaita App"))));
+          HeaderBar::c(|w| {
+            w.set_title_widget(Some(&Label::new(Some("My Adwaita App"))));
           }),
-          Box::c(|c| {
-            c.set_orientation(Orientation::Vertical);
-            c.set_spacing(5);
-            c.set_margin_all(5);
+          Box::c(|w| {
+            w.set_orientation(Orientation::Vertical);
+            w.set_spacing(5);
+            w.set_margin_all(5);
           })
           .children(vec![
             //
-            Button::ce(|c, d| {
-              c.set_label("Increment");
-              vec![c.connect_clicked(move |_| d(AppMsg::Increment))]
+            Button::ce(|w, c| {
+              w.set_label("Increment");
+              vec![w.connect_clicked(c.d(|_| AppMsg::Increment))]
             }),
-            Button::ce(|c, d| {
-              c.set_label("Decrement");
-              vec![c.connect_clicked(move |_| d(AppMsg::Decrement))]
+            Button::ce(|w, c| {
+              w.set_label("Decrement");
+              vec![w.connect_clicked(c.d(|_| AppMsg::Decrement))]
             }),
-            Label::c(move |c| {
-              c.set_label(&format!("Counter: {}", count_cloned));
-              c.set_margin_all(5);
+            Label::c(|w| {
+              w.set_label(&format!("Counter: {}", self.count));
+              w.set_margin_all(5);
             }),
           ]),
         ]),

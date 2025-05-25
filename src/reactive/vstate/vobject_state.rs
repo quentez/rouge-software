@@ -21,7 +21,10 @@ use super::VState;
 use crate::reactive::{
   component::Component,
   scope::Scope,
-  vnode::{vobject::VObject, VNode},
+  vnode::{
+    vobject::{VObject, VObjectContext},
+    VNode,
+  },
 };
 
 pub struct VObjectState<Model: Component> {
@@ -301,11 +304,8 @@ impl<C: 'static + Component> VObjectState<C> {
       initial_props.insert(prop.name(), value);
     }
 
-    let scope_copy = scope.clone();
-    let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
-      scope_copy.send_message(msg);
-    });
-    let handlers = (vobj.patcher)(&object, dispatch);
+    let context = VObjectContext::new(scope.clone());
+    let handlers = (vobj.patcher)(&object, &context);
 
     VObjectState {
       object: object.upcast(),
@@ -448,11 +448,8 @@ impl<C: 'static + Component> VObjectState<C> {
     }
 
     // Re-apply patcher.
-    let scope_copy = scope.clone();
-    let dispatch = std::boxed::Box::new(move |msg: C::Msg| {
-      scope_copy.send_message(msg);
-    });
-    let new_handlers = (vobj.patcher)(&self.object, dispatch);
+    let context = VObjectContext::new(scope.clone());
+    let new_handlers = (vobj.patcher)(&self.object, &context);
     self.handlers = new_handlers;
 
     // // Patch properties

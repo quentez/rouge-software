@@ -22,7 +22,7 @@ pub enum UpdateAction {
   Render,
 }
 
-pub trait Component: Default + Unpin {
+pub trait Component: Default + Unpin + Clone {
   type Msg: Clone + Send + Debug + Unpin;
   type Props: Clone + Default;
 
@@ -193,7 +193,7 @@ where
   P: Component,
 {
   task: ComponentTask<C, P>,
-  view: VNode<C>,
+  // view: VNode<C>,
   sender: UnboundedSender<ComponentMessage<C>>,
 }
 
@@ -226,8 +226,10 @@ where
       None => Scope::new(type_name, user_send),
     };
     let state = C::create();
-    let initial_view = state.view();
+    let cloned_state = state.clone();
+    let initial_view = cloned_state.view();
     let ui_state = VState::build_root(&initial_view, parent, &scope);
+
     PartialComponentTask {
       task: ComponentTask {
         scope,
@@ -236,7 +238,7 @@ where
         ui_state: Some(ui_state),
         channel,
       },
-      view: initial_view,
+      // view: initial_view,
       sender: sys_send,
     }
   }
@@ -245,7 +247,8 @@ where
   /// children.
   pub fn finalise(mut self) -> (UnboundedSender<ComponentMessage<C>>, ComponentTask<C, P>) {
     if let Some(ref mut ui_state) = self.task.ui_state {
-      ui_state.build_children(&self.view, &self.task.scope);
+      let view = &self.task.state.view();
+      ui_state.build_children(view, &self.task.scope);
     }
 
     (self.sender, self.task)
