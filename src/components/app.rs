@@ -25,7 +25,7 @@ pub enum AppMsg {
 
 impl Default for AppModel {
   fn default() -> Self {
-    AppModel { count: 1 }
+    AppModel { count: 0 }
   }
 }
 
@@ -51,6 +51,26 @@ impl Component for AppModel {
   }
 
   fn view(&self) -> VNode<AppModel> {
+    let controls: Vec<VNode<'_, Self>> = (0..(self.count + 1))
+      .flat_map(|_| -> Vec<VNode<'_, Self>> {
+        vec![
+          //
+          Button::ce(|w, c| {
+            w.set_label("Increment");
+            vec![w.connect_clicked(c.d(|_| AppMsg::Increment))]
+          }),
+          Button::ce(|w, c| {
+            w.set_label("Decrement");
+            vec![w.connect_clicked(c.d(|_| AppMsg::Decrement))]
+          }),
+          Label::c(|w| {
+            w.set_label(&format!("Counter: {}", self.count));
+            w.set_margin_all(5);
+          }),
+        ]
+      })
+      .collect();
+
     Application::cs().children(vec![
       //
       Window::c(|w| {
@@ -72,21 +92,7 @@ impl Component for AppModel {
             w.set_spacing(5);
             w.set_margin_all(5);
           })
-          .children(vec![
-            //
-            Button::ce(|w, c| {
-              w.set_label("Increment");
-              vec![w.connect_clicked(c.d(|_| AppMsg::Increment))]
-            }),
-            Button::ce(|w, c| {
-              w.set_label("Decrement");
-              vec![w.connect_clicked(c.d(|_| AppMsg::Decrement))]
-            }),
-            Label::c(|w| {
-              w.set_label(&format!("Counter: {}", self.count));
-              w.set_margin_all(5);
-            }),
-          ]),
+          .children(controls),
         ]),
       ]),
     ])
