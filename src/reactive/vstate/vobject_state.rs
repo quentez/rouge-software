@@ -13,7 +13,7 @@ use adw::{
 };
 use gtk4::{
   prelude::{ApplicationWindowExt, BoxExt, GridExt, GtkApplicationExt, GtkWindowExt, WidgetExt},
-  Box, Builder, Grid, Notebook, ShortcutsWindow, Widget,
+  Box, Builder, Grid, Notebook, ScrolledWindow, ShortcutsWindow, Widget,
 };
 use std::collections::HashMap;
 
@@ -134,6 +134,17 @@ fn add_child(parent: &Object, index: usize, total: usize, child: &Object) {
       );
     }
   }
+  // ScolledWindow.
+  else if let Some(window) = parent.downcast_ref::<ScrolledWindow>() {
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      window.set_child(Some(widget));
+    } else {
+      panic!(
+        "ScrolledWindow's child must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
   // Box.
   else if let Some(parent) = parent.downcast_ref::<Box>() {
     // Box: added normally, except one widget can be added using
@@ -192,16 +203,34 @@ fn remove_child(parent: &Object, child: &Object) {
   // Window.
   else if let Some(window) = parent.downcast_ref::<Window>() {
     if let Some(widget) = child.downcast_ref::<Widget>() {
-      // if window.titlebar().is_some_and(|w| w.eq(widget)) {
-      //   window.set_titlebar(Option::<&Widget>::None);
-      // }
-
       if window.content().is_some_and(|w| w.eq(widget)) {
         window.set_content(Option::<&Widget>::None);
       }
     } else {
       panic!(
         "Window's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // HeaderBar.
+  else if let Some(parent) = parent.downcast_ref::<HeaderBar>() {
+    if let Some(widget) = child.downcast_ref::<Widget>() {
+      parent.remove(widget);
+    } else {
+      panic!(
+        "HeaderBar's children must be Widgets, but {} was found.",
+        child.type_()
+      );
+    }
+  }
+  // ScolledWindow.
+  else if let Some(parent) = parent.downcast_ref::<ScrolledWindow>() {
+    if child.downcast_ref::<Widget>().is_some() {
+      parent.set_child(Option::<&Widget>::None);
+    } else {
+      panic!(
+        "ScrolledWindow's child must be Widgets, but {} was found.",
         child.type_()
       );
     }
@@ -234,9 +263,10 @@ fn remove_child(parent: &Object, child: &Object) {
   }
 }
 
-const IGNORED_PROPS: [&str; 7] = [
+const IGNORED_PROPS: [&str; 8] = [
   "parent",
   "root",
+  "child",
   "accessible-role",
   "layout-manager",
   "flags",

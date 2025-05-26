@@ -501,6 +501,32 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d750af042f7ef4f724306de029d18836c26c1765a54a6a3f094cbd23a7267ffa"
 
 [[package]]
+name = "libflatpak"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f7fe698a3623d42cdf92d5aa7f22924cef6d065c416ae31a834c2d9c2a01a392"
+dependencies = [
+ "gio",
+ "glib",
+ "libc",
+ "libflatpak-sys",
+]
+
+[[package]]
+name = "libflatpak-sys"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c9f29e2c35913503aeefe464534c801881c1c6ff7adf365b9342073b788fd6"
+dependencies = [
+ "gio-sys",
+ "glib-sys",
+ "gobject-sys",
+ "libc",
+ "pkg-config",
+ "system-deps",
+]
+
+[[package]]
 name = "libloading"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -638,6 +664,7 @@ dependencies = [
  "futures",
  "gtk4",
  "libadwaita",
+ "libflatpak",
  "log",
  "subsecond",
 ]

@@ -48,12 +48,12 @@ pub trait Component: Default + Unpin + Clone {
   type Message: Clone + Send + Debug + Unpin;
   type Props: Clone + Default;
 
-  fn update(&mut self, _message: Self::Message) -> UpdateAction {
-    UpdateAction::None
-  }
-
   fn create(_props: Self::Props) -> Self {
     Default::default()
+  }
+
+  fn update(&mut self, _message: Self::Message) -> UpdateAction {
+    UpdateAction::None
   }
 
   fn change(&mut self, _props: Self::Props) -> UpdateAction {
