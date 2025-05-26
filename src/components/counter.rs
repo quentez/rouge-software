@@ -1,4 +1,5 @@
-use crate::reactive::component::UpdateAction;
+use crate::reactive::callback::Callback;
+use crate::reactive::component::{UpdateAction, ViewContext};
 use crate::reactive::helpers::widget_ext::ReactiveWidgetExt;
 use crate::reactive::vnode::vobject::VObjectBuilder;
 use crate::reactive::{component::Component, vnode::VNode};
@@ -11,22 +12,23 @@ use gtk4::{Box, Button, Label, Orientation};
 
 #[derive(Clone, Debug, Default)]
 pub struct Counter {
-  name: String,
-  count: u8,
-}
-
-#[derive(Clone, Debug)]
-pub struct CounterProps {
   pub name: String,
+  pub count: u8,
+  pub on_changed: Callback<i8>,
 }
 
-impl Default for CounterProps {
-  fn default() -> Self {
-    CounterProps {
-      name: "Counter".to_string(),
-    }
-  }
-}
+// #[derive(Clone, Debug)]
+// pub struct CounterProps {
+//   pub name: String,
+// }
+
+// impl Default for CounterProps {
+//   fn default() -> Self {
+//     CounterProps {
+//       name: "Counter".to_string(),
+//     }
+//   }
+// }
 
 #[derive(Clone, Debug)]
 pub enum CounterMessage {
@@ -40,38 +42,44 @@ pub enum CounterMessage {
 
 impl Component for Counter {
   type Message = CounterMessage;
-  type Props = CounterProps;
+  type Props = Counter;
 
   fn create(props: Self::Props) -> Self {
-    Self {
-      name: props.name,
-      count: 1,
-    }
+    props
+    // Self {
+    //   name: props.name,
+    //   count: 1,
+    // }
   }
 
   fn change(&mut self, props: Self::Props) -> UpdateAction {
-    if self.name == props.name {
-      UpdateAction::None
-    } else {
-      self.name = props.name;
-      UpdateAction::Render
-    }
+    // if self.name == props.name {
+    //   UpdateAction::None
+    // } else {
+    //   self.name = props.name;
+    //   UpdateAction::Render
+    // }
+    *self = props;
+    UpdateAction::Render
   }
 
   fn update(&mut self, message: Self::Message) -> UpdateAction {
     match message {
       CounterMessage::Increment => {
-        self.count = self.count.saturating_add(1);
-        UpdateAction::Render
+        // self.count = self.count.saturating_add(1);
+        // UpdateAction::Render
+        self.on_changed.send(1);
       }
       CounterMessage::Decrement => {
-        self.count = self.count.saturating_sub(1);
-        UpdateAction::Render
+        // self.count = self.count.saturating_sub(1);
+        // UpdateAction::Render
+        self.on_changed.send(-1);
       }
     }
+    UpdateAction::None
   }
 
-  fn view(&self) -> VNode<Self> {
+  fn view(&self, _: &ViewContext<Self>) -> VNode<Self> {
     Box::c(|w| {
       w.set_orientation(Orientation::Vertical);
       w.set_spacing(5);

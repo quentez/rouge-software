@@ -4,6 +4,7 @@ use std::sync::RwLock;
 use std::task::{Context, Poll};
 
 use adw::glib::clone::Downgrade;
+use adw::glib::object::IsA;
 use adw::glib::{Object, WeakRef};
 use colored::Colorize;
 use futures::channel::mpsc::{unbounded, UnboundedSender};
@@ -14,12 +15,33 @@ use log::{debug, trace};
 use crate::reactive::scope::Scope;
 use crate::reactive::vnode::VNode;
 
+use super::callback::Callback;
 use super::scope::AnyScope;
 use super::vstate::VState;
 
 pub enum UpdateAction {
   None,
   Render,
+}
+
+pub struct ViewContext<C: Component> {
+  scope: Scope<C>,
+}
+
+impl<C: Component> ViewContext<C> {
+  pub fn new(scope: Scope<C>) -> ViewContext<C> {
+    ViewContext { scope }
+  }
+}
+
+impl<C: 'static + Component> ViewContext<C> {
+  pub fn d<R, MB: 'static + Fn(R) -> C::Message>(&self, message_builder: MB) -> Callback<R> {
+    let scope_clone = self.scope.clone();
+    Callback::from(move |o| {
+      let message = message_builder(o);
+      scope_clone.send_message(message);
+    })
+  }
 }
 
 pub trait Component: Default + Unpin + Clone {
@@ -41,7 +63,7 @@ pub trait Component: Default + Unpin + Clone {
   fn mounted(&self) {}
   fn unmounted(&self) {}
 
-  fn view(&self) -> VNode<Self>;
+  fn view(&self, context: &ViewContext<Self>) -> VNode<Self>;
 }
 
 pub enum ComponentMessage<C: Component> {
@@ -151,7 +173,8 @@ where
         Poll::Pending if render => {
           if let Some(ref mut ui_state) = self.ui_state {
             // we patch
-            let new_view = self.state.view();
+            let context = ViewContext::new(self.scope.clone());
+            let new_view = self.state.view(&context);
             self.scope.mute();
             if !ui_state.patch(&new_view, None, &self.scope) {
               unimplemented!(
@@ -228,7 +251,8 @@ where
     };
     let state = C::create(props);
     let cloned_state = state.clone();
-    let initial_view = cloned_state.view();
+    let context = ViewContext::new(scope.clone());
+    let initial_view = cloned_state.view(&context);
     let ui_state = VState::build_root(&initial_view, parent, &scope);
 
     PartialComponentTask {
@@ -247,8 +271,9 @@ where
   /// Finalise the partially constructed `ComponentTask` by constructing its
   /// children.
   pub fn finalise(mut self) -> (UnboundedSender<ComponentMessage<C>>, ComponentTask<C, P>) {
+    let context: ViewContext<_> = ViewContext::new(self.scope());
     if let Some(ref mut ui_state) = self.task.ui_state {
-      let view = &self.task.state.view();
+      let view = &self.task.state.view(&context);
       ui_state.build_children(view, &self.task.scope);
     }
 

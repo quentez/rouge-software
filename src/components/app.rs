@@ -2,8 +2,8 @@ use adw::{Application, HeaderBar, Window};
 use gtk4::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt};
 use gtk4::{Box, Button, Label, Orientation};
 
-use crate::components::counter::{Counter, CounterProps};
-use crate::reactive::component::UpdateAction;
+use crate::components::counter::Counter;
+use crate::reactive::component::{UpdateAction, ViewContext};
 use crate::reactive::helpers::widget_ext::ReactiveWidgetExt;
 use crate::reactive::vnode::vcomponent::VComponentBuilder;
 use crate::reactive::vnode::vobject::VObjectBuilder;
@@ -22,6 +22,7 @@ pub struct App {
 pub enum AppMessage {
   Increment,
   Decrement,
+  Add(i8),
 }
 
 impl Default for App {
@@ -48,10 +49,14 @@ impl Component for App {
         self.count = self.count.saturating_sub(1);
         UpdateAction::Render
       }
+      AppMessage::Add(delta) => {
+        self.count = self.count.saturating_add_signed(delta);
+        UpdateAction::Render
+      }
     }
   }
 
-  fn view(&self) -> VNode<App> {
+  fn view(&self, c: &ViewContext<Self>) -> VNode<App> {
     Application::cs().children(vec![
       //
       Window::c(|w| {
@@ -83,11 +88,15 @@ impl Component for App {
               w.set_label("Remove");
               vec![w.connect_clicked(c.d(|_| AppMessage::Decrement))]
             }),
-            Counter::cp(CounterProps {
+            Counter::cp(Counter {
               name: format!("Counter - {}", self.count),
+              count: self.count,
+              on_changed: c.d(AppMessage::Add),
             }),
-            Counter::cp(CounterProps {
-              name: "Second counter".to_string(),
+            Counter::cp(Counter {
+              name: format!("Count - {}", self.count + 1),
+              count: self.count,
+              on_changed: c.d(AppMessage::Add),
             }),
           ]),
         ]),
