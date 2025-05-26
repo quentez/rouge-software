@@ -2,18 +2,19 @@ use adw::{Application, HeaderBar, Window};
 use gtk4::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt};
 use gtk4::{Box, Button, Label, Orientation};
 
+use crate::components::counter::Counter;
 use crate::reactive::component::UpdateAction;
 use crate::reactive::helpers::widget_ext::ReactiveWidgetExt;
+use crate::reactive::vnode::vcomponent::VComponentBuilder;
 use crate::reactive::vnode::vobject::VObjectBuilder;
 use crate::reactive::{component::Component, vnode::VNode};
-use std::boxed::Box as B;
 
 //
 // State.
 //
 
 #[derive(Clone, Debug)]
-pub struct AppModel {
+pub struct App {
   count: u8,
 }
 
@@ -23,9 +24,9 @@ pub enum AppMsg {
   Decrement,
 }
 
-impl Default for AppModel {
+impl Default for App {
   fn default() -> Self {
-    AppModel { count: 0 }
+    App { count: 1 }
   }
 }
 
@@ -33,7 +34,7 @@ impl Default for AppModel {
 // Component.
 //
 
-impl Component for AppModel {
+impl Component for App {
   type Msg = AppMsg;
   type Props = ();
 
@@ -50,23 +51,12 @@ impl Component for AppModel {
     }
   }
 
-  fn view(&self) -> VNode<AppModel> {
-    let controls: Vec<VNode<'_, Self>> = (0..(self.count + 1))
-      .flat_map(|_| -> Vec<VNode<'_, Self>> {
+  fn view(&self) -> VNode<App> {
+    let controls: Vec<VNode<'_, _>> = (0..(self.count + 1))
+      .flat_map(|_| -> Vec<VNode<'_, _>> {
         vec![
           //
-          Button::ce(|w, c| {
-            w.set_label("Increment");
-            vec![w.connect_clicked(c.d(|_| AppMsg::Increment))]
-          }),
-          Button::ce(|w, c| {
-            w.set_label("Decrement");
-            vec![w.connect_clicked(c.d(|_| AppMsg::Decrement))]
-          }),
-          Label::c(|w| {
-            w.set_label(&format!("Counter: {}", self.count));
-            w.set_margin_all(5);
-          }),
+          Counter::c(),
         ]
       })
       .collect();

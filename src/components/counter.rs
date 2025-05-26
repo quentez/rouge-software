@@ -1,72 +1,72 @@
-// use adw::gtk::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt, WidgetExt};
-// use relm4::{adw, gtk, view, ComponentParts, ComponentSender, RelmWidgetExt, SimpleComponent};
+use crate::reactive::component::UpdateAction;
+use crate::reactive::helpers::widget_ext::ReactiveWidgetExt;
+use crate::reactive::vnode::vobject::VObjectBuilder;
+use crate::reactive::{component::Component, vnode::VNode};
+use gtk4::prelude::{BoxExt, ButtonExt, OrientableExt};
+use gtk4::{Box, Button, Label, Orientation};
 
-// pub struct CounterModel {
-//   count: u8,
-// }
+//
+// State.
+//
 
-// #[derive(Debug)]
-// pub enum CounterMessage {
-//   Increment,
-//   Decrement,
-// }
+#[derive(Clone, Debug)]
+pub struct Counter {
+  count: u8,
+}
 
-// #[relm4::component(pub)]
-// impl SimpleComponent for CounterModel {
-//   type Input = CounterMessage;
-//   type Output = ();
+#[derive(Clone, Debug)]
+pub enum CounterMessage {
+  Increment,
+  Decrement,
+}
 
-//   type Init = u8;
+impl Default for Counter {
+  fn default() -> Self {
+    Counter { count: 1 }
+  }
+}
 
-//   view! {
-//     gtk::Window {
-//       set_title: Some("Software"),
-//       set_default_width: 300,
-//       set_default_height: 100,
+//
+// Component.
+//
 
-//       gtk::Box {
-//         set_orientation: gtk::Orientation::Vertical,
-//         set_spacing: 5,
-//         set_margin_all: 5,
+impl Component for Counter {
+  type Msg = CounterMessage;
+  type Props = ();
 
-//         gtk::Button {
-//           set_label: "Increment",
-//           connect_clicked => CounterMessage::Increment
-//         },
+  fn update(&mut self, message: Self::Msg) -> UpdateAction {
+    match message {
+      CounterMessage::Increment => {
+        self.count = self.count.saturating_add(1);
+        UpdateAction::Render
+      }
+      CounterMessage::Decrement => {
+        self.count = self.count.saturating_sub(1);
+        UpdateAction::Render
+      }
+    }
+  }
 
-//         gtk::Button {
-//           set_label: "Decrement",
-//           connect_clicked => CounterMessage::Decrement,
-//         },
-
-//         gtk::Label {
-//           #[watch]
-//           set_label: &format!("Counter: {}", model.count),
-//           set_margin_all: 20,
-//         }
-//       }
-//     }
-//   }
-
-//   fn init(
-//     count: Self::Init,
-//     root: Self::Root,
-//     sender: ComponentSender<Self>,
-//   ) -> ComponentParts<Self> {
-//     let model = CounterModel { count };
-//     let widgets = view_output!();
-
-//     ComponentParts { model, widgets }
-//   }
-
-//   fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>) {
-//     match message {
-//       CounterMessage::Increment => {
-//         self.count = self.count.wrapping_add(1);
-//       }
-//       CounterMessage::Decrement => {
-//         self.count = self.count.wrapping_sub(1);
-//       }
-//     }
-//   }
-// }
+  fn view(&self) -> VNode<Self> {
+    Box::c(|w| {
+      w.set_orientation(Orientation::Vertical);
+      w.set_spacing(5);
+      w.set_margin_all(5);
+    })
+    .children(vec![
+      //
+      Button::ce(|w, c| {
+        w.set_label("Increment");
+        vec![w.connect_clicked(c.d(|_| CounterMessage::Increment))]
+      }),
+      Button::ce(|w, c| {
+        w.set_label("Decrement");
+        vec![w.connect_clicked(c.d(|_| CounterMessage::Decrement))]
+      }),
+      Label::c(|w| {
+        w.set_label(&format!("Counter: {}", self.count));
+        w.set_margin_all(5);
+      }),
+    ])
+  }
+}

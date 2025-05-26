@@ -18,15 +18,15 @@ pub struct VComponent<C: Component> {
 }
 
 pub trait VComponentBuilder<'a, C: Component> {
-  fn c() -> VNode<'a, C>;
+  fn c<Parent: 'static + Component>() -> VNode<'a, Parent>;
 }
 
-impl<'a, C: 'static + Component> VComponentBuilder<'a, C> for C {
-  fn c() -> super::VNode<'a, C> {
-    let constructor: Box<Constructor<C>> = Box::new(VComponentState::build::<C>);
+impl<'a, Child: 'static + Component> VComponentBuilder<'a, Child> for Child {
+  fn c<Parent: 'static + Component>() -> super::VNode<'a, Parent> {
+    let constructor: Box<Constructor<Parent>> = Box::new(VComponentState::build::<Child>);
     VNode::Component(VComponent {
       parent: PhantomData,
-      model_type: TypeId::of::<C>(),
+      model_type: TypeId::of::<Child>(),
       constructor,
     })
   }
