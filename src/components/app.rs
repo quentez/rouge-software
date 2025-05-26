@@ -2,7 +2,7 @@ use adw::{Application, HeaderBar, Window};
 use gtk4::prelude::{BoxExt, ButtonExt, GtkWindowExt, OrientableExt};
 use gtk4::{Box, Button, Label, Orientation};
 
-use crate::components::counter::Counter;
+use crate::components::counter::{Counter, CounterProps};
 use crate::reactive::component::UpdateAction;
 use crate::reactive::helpers::widget_ext::ReactiveWidgetExt;
 use crate::reactive::vnode::vcomponent::VComponentBuilder;
@@ -19,7 +19,7 @@ pub struct App {
 }
 
 #[derive(Clone, Debug)]
-pub enum AppMsg {
+pub enum AppMessage {
   Increment,
   Decrement,
 }
@@ -35,16 +35,16 @@ impl Default for App {
 //
 
 impl Component for App {
-  type Msg = AppMsg;
+  type Message = AppMessage;
   type Props = ();
 
-  fn update(&mut self, message: Self::Msg) -> UpdateAction {
+  fn update(&mut self, message: Self::Message) -> UpdateAction {
     match message {
-      AppMsg::Increment => {
+      AppMessage::Increment => {
         self.count = self.count.saturating_add(1);
         UpdateAction::Render
       }
-      AppMsg::Decrement => {
+      AppMessage::Decrement => {
         self.count = self.count.saturating_sub(1);
         UpdateAction::Render
       }
@@ -52,15 +52,6 @@ impl Component for App {
   }
 
   fn view(&self) -> VNode<App> {
-    let controls: Vec<VNode<'_, _>> = (0..(self.count + 1))
-      .flat_map(|_| -> Vec<VNode<'_, _>> {
-        vec![
-          //
-          Counter::c(),
-        ]
-      })
-      .collect();
-
     Application::cs().children(vec![
       //
       Window::c(|w| {
@@ -82,7 +73,23 @@ impl Component for App {
             w.set_spacing(5);
             w.set_margin_all(5);
           })
-          .children(controls),
+          .children(vec![
+            //
+            Button::ce(|w, c| {
+              w.set_label("Add");
+              vec![w.connect_clicked(c.d(|_| AppMessage::Increment))]
+            }),
+            Button::ce(|w, c| {
+              w.set_label("Remove");
+              vec![w.connect_clicked(c.d(|_| AppMessage::Decrement))]
+            }),
+            Counter::cp(CounterProps {
+              name: format!("Counter - {}", self.count),
+            }),
+            Counter::cp(CounterProps {
+              name: "Second counter".to_string(),
+            }),
+          ]),
         ]),
       ]),
     ])

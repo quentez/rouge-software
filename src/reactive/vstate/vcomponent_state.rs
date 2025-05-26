@@ -7,11 +7,11 @@ use gtk4::{prelude::WidgetExt, Widget};
 use crate::reactive::{
   component::{Component, ComponentMessage, ComponentTask},
   scope::Scope,
-  vnode::vcomponent::VComponent,
+  vnode::{vcomponent::VComponent, vprops::VProps},
 };
 
 trait PropertiesReceiver {
-  fn update(&self);
+  fn update(&self, props: &VProps);
   fn unmounting(&self);
 }
 
@@ -23,8 +23,12 @@ pub struct VComponentState<Model: Component> {
 }
 
 impl<C: 'static + Component> VComponentState<C> {
-  pub fn build<Child: 'static + Component>(parent: Option<&Object>, scope: &Scope<C>) -> Self {
-    let (sub_state, object) = VSubcomponentState::<Child>::new(parent, scope);
+  pub fn build<Child: 'static + Component>(
+    props: &VProps,
+    parent: Option<&Object>,
+    scope: &Scope<C>,
+  ) -> Self {
+    let (sub_state, object) = VSubcomponentState::<Child>::new(props, parent, scope);
     VComponentState {
       parent: PhantomData,
       object,
@@ -44,7 +48,7 @@ impl<C: 'static + Component> VComponentState<C> {
       // for prop in &spec.child_props {
       //   (prop.set)(self.object.upcast_ref(), parent, false);
       // }
-      self.state.update();
+      self.state.update(&spec.props);
       true
     } else {
       // Component type changed; need to rebuild
@@ -64,11 +68,12 @@ pub struct VSubcomponentState<C: Component> {
 
 impl<C: 'static + Component> VSubcomponentState<C> {
   fn new<P: 'static + Component>(
+    props: &VProps,
     parent: Option<&Object>,
     parent_scope: &Scope<P>,
   ) -> (Self, Object) {
-    // let props: Model::Properties = props.unwrap();
-    let (channel, task) = ComponentTask::<C, P>::new(parent, Some(parent_scope));
+    let props: C::Props = props.unwrap();
+    let (channel, task) = ComponentTask::<C, P>::new(props, parent, Some(parent_scope));
     let object = task.object().unwrap();
     // for prop in child_props {
     //   (prop.set)(object.upcast_ref(), parent, true);
@@ -79,12 +84,12 @@ impl<C: 'static + Component> VSubcomponentState<C> {
 }
 
 impl<Model: 'static + Component> PropertiesReceiver for VSubcomponentState<Model> {
-  fn update(&self) {
-    // let props = raw_props.unwrap();
-    // self
-    //   .channel
-    //   .unbounded_send(ComponentMessage::Props(props))
-    //   .expect("failed to send props message over system channel")
+  fn update(&self, raw_props: &VProps) {
+    let props = raw_props.unwrap();
+    self
+      .channel
+      .unbounded_send(ComponentMessage::Props(props))
+      .expect("failed to send props message over system channel")
   }
 
   fn unmounting(&self) {

@@ -1,5 +1,6 @@
 pub mod vcomponent;
 pub mod vobject;
+pub mod vprops;
 
 use vcomponent::VComponent;
 use vobject::VObject;

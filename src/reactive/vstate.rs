@@ -20,7 +20,7 @@ impl<Model: 'static + Component> VState<Model> {
     match vnode {
       VNode::Object(object) => VState::Object(VObjectState::build(object, parent, scope)),
       VNode::Component(vcomp) => {
-        let comp = (vcomp.constructor)(parent, scope);
+        let comp = (vcomp.constructor)(&vcomp.props, parent, scope);
         VState::Component(comp)
       }
     }

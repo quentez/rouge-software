@@ -45,7 +45,7 @@ fn once<A, F: FnOnce(A)>(and_then: AndThen, f: F) -> impl Fn(A) {
 
 pub fn start<C: 'static + Component>() -> (Application, Scope<C>) {
   gtk4::init().expect("GTK failed to initialize.");
-  let partial_task = PartialComponentTask::<C, C>::new(None, None);
+  let partial_task = PartialComponentTask::<C, C>::new(Default::default(), None, None);
 
   let app: Application = partial_task.object().downcast().unwrap_or_else(|_| {
     panic!(

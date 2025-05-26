@@ -15,11 +15,11 @@ use crate::reactive::component::Component;
 pub struct Scope<C: Component> {
   name: &'static str,
   muted: Arc<AtomicUsize>,
-  channel: UnboundedSender<C::Msg>,
+  channel: UnboundedSender<C::Message>,
 }
 
 impl<C: Component> Scope<C> {
-  pub(crate) fn new(name: &'static str, channel: UnboundedSender<C::Msg>) -> Self {
+  pub(crate) fn new(name: &'static str, channel: UnboundedSender<C::Message>) -> Self {
     Scope {
       name,
       muted: Default::default(),
@@ -32,7 +32,7 @@ impl<C: 'static + Component> Scope<C> {
   pub fn inherit<Child: Component>(
     &self,
     name: &'static str,
-    channel: UnboundedSender<Child::Msg>,
+    channel: UnboundedSender<Child::Message>,
   ) -> Scope<Child> {
     Scope {
       name,
@@ -53,7 +53,7 @@ impl<C: 'static + Component> Scope<C> {
     self.muted.fetch_sub(1, Ordering::SeqCst);
   }
 
-  pub fn send_message(&self, message: C::Msg) {
+  pub fn send_message(&self, message: C::Message) {
     self.log(&message);
     if !self.is_muted() {
       self
@@ -64,7 +64,7 @@ impl<C: 'static + Component> Scope<C> {
   }
 
   #[inline(always)]
-  fn log(&self, message: &C::Msg) {
+  fn log(&self, message: &C::Message) {
     debug!(
       "{} {}: {}",
       format!(

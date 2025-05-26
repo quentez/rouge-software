@@ -9,9 +9,23 @@ use gtk4::{Box, Button, Label, Orientation};
 // State.
 //
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Counter {
+  name: String,
   count: u8,
+}
+
+#[derive(Clone, Debug)]
+pub struct CounterProps {
+  pub name: String,
+}
+
+impl Default for CounterProps {
+  fn default() -> Self {
+    CounterProps {
+      name: "Counter".to_string(),
+    }
+  }
 }
 
 #[derive(Clone, Debug)]
@@ -20,21 +34,31 @@ pub enum CounterMessage {
   Decrement,
 }
 
-impl Default for Counter {
-  fn default() -> Self {
-    Counter { count: 1 }
-  }
-}
-
 //
 // Component.
 //
 
 impl Component for Counter {
-  type Msg = CounterMessage;
-  type Props = ();
+  type Message = CounterMessage;
+  type Props = CounterProps;
 
-  fn update(&mut self, message: Self::Msg) -> UpdateAction {
+  fn create(props: Self::Props) -> Self {
+    Self {
+      name: props.name,
+      count: 1,
+    }
+  }
+
+  fn change(&mut self, props: Self::Props) -> UpdateAction {
+    if self.name == props.name {
+      UpdateAction::None
+    } else {
+      self.name = props.name;
+      UpdateAction::Render
+    }
+  }
+
+  fn update(&mut self, message: Self::Message) -> UpdateAction {
     match message {
       CounterMessage::Increment => {
         self.count = self.count.saturating_add(1);
@@ -64,7 +88,7 @@ impl Component for Counter {
         vec![w.connect_clicked(c.d(|_| CounterMessage::Decrement))]
       }),
       Label::c(|w| {
-        w.set_label(&format!("Counter: {}", self.count));
+        w.set_label(&format!("{}: {}", self.name, self.count));
         w.set_margin_all(5);
       }),
     ])

@@ -23,19 +23,19 @@ pub enum UpdateAction {
 }
 
 pub trait Component: Default + Unpin + Clone {
-  type Msg: Clone + Send + Debug + Unpin;
+  type Message: Clone + Send + Debug + Unpin;
   type Props: Clone + Default;
 
-  fn update(&mut self, _message: Self::Msg) -> UpdateAction {
+  fn update(&mut self, _message: Self::Message) -> UpdateAction {
     UpdateAction::None
   }
 
-  fn create() -> Self {
+  fn create(_props: Self::Props) -> Self {
     Default::default()
   }
 
   fn change(&mut self, _props: Self::Props) -> UpdateAction {
-    unimplemented!("Add a Component::change() implementation.")
+    unimplemented!("add a Component::change() implementation");
   }
 
   fn mounted(&self) {}
@@ -45,7 +45,7 @@ pub trait Component: Default + Unpin + Clone {
 }
 
 pub enum ComponentMessage<C: Component> {
-  Update(C::Msg),
+  Update(C::Message),
   Props(C::Props),
   Mounted,
   Unmounted,
@@ -88,10 +88,11 @@ where
   P: 'static + Component,
 {
   pub fn new(
+    props: C::Props,
     parent: Option<&Object>,
     parent_scope: Option<&Scope<P>>,
   ) -> (UnboundedSender<ComponentMessage<C>>, Self) {
-    PartialComponentTask::new(parent, parent_scope).finalise()
+    PartialComponentTask::new(props, parent, parent_scope).finalise()
   }
 
   pub fn process(&mut self, ctx: &mut Context<'_>) -> Poll<()> {
@@ -208,7 +209,7 @@ where
   /// This is generally only useful when you're constructing an `Application`,
   /// where windows should not be added to it until it's been activated, but
   /// you need to have the `Application` object in order to activate it.
-  pub fn new(parent: Option<&Object>, parent_scope: Option<&Scope<P>>) -> Self {
+  pub fn new(props: C::Props, parent: Option<&Object>, parent_scope: Option<&Scope<P>>) -> Self {
     let (sys_send, sys_recv) = unbounded();
     let (user_send, user_recv) = unbounded();
 
@@ -225,7 +226,7 @@ where
       Some(ref p) => p.inherit(type_name, user_send),
       None => Scope::new(type_name, user_send),
     };
-    let state = C::create();
+    let state = C::create(props);
     let cloned_state = state.clone();
     let initial_view = cloned_state.view();
     let ui_state = VState::build_root(&initial_view, parent, &scope);

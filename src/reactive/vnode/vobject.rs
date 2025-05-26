@@ -16,7 +16,7 @@ impl<C: Component> VObjectContext<C> {
 }
 
 impl<C: 'static + Component> VObjectContext<C> {
-  pub fn d<W: IsA<Object>, MB: 'static + Fn(&W) -> C::Msg>(
+  pub fn d<W: IsA<Object>, MB: 'static + Fn(&W) -> C::Message>(
     &self,
     message_builder: MB,
   ) -> impl 'static + Fn(&W) {
@@ -38,7 +38,7 @@ pub struct VObject<'a, C: Component> {
 }
 
 impl<'a, C: Component> VObject<'a, C> {
-  pub fn children(self, children: Vec<VNode<'a, C>>) -> VNode<C> {
+  pub fn children(self, children: Vec<VNode<'a, C>>) -> VNode<'a, C> {
     VNode::Object(Self { children, ..self })
   }
 }
